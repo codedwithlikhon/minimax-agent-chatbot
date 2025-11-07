@@ -1,0 +1,79 @@
+{
+  "name": "minimax-agent-chatbot",
+  "version": "1.0.0",
+  "description": "Comprehensive AI chatbot with todos, XFCE desktop integration, and agentic capabilities",
+  "main": "run.py",
+  "scripts": {
+    "start": "python run.py",
+    "dev": "python chatbot.py",
+    "api": "uvicorn chatbot:app --host 0.0.0.0 --port 8000 --reload",
+    "frontend": "cd frontend && python -m http.server 5173",
+    "install-deps": "pip install -r requirements.txt",
+    "test": "python -m pytest tests/",
+    "logs": "./manage.sh logs",
+    "status": "./manage.sh status",
+    "health": "./manage.sh health",
+    "build": "echo 'Building Docker image...' && docker build -t minimax-chatbot .",
+    "docker-up": "docker-compose up -d",
+    "docker-down": "docker-compose down",
+    "docker-logs": "docker-compose logs -f",
+    "setup": "chmod +x manage.sh && chmod +x run.py",
+    "init-db": "python -c 'from chatbot import Database; Database().init_database()'",
+    "vnc": "x11vnc -display :1 -rfbport 5900 -forever",
+    "chrome": "google-chrome --headless --remote-debugging-port=9222 --no-sandbox --disable-gpu",
+    "backup": "tar -czf backup-$(date +%Y%m%d_%H%M%S).tar.gz chatbot.db logs/ data/",
+    "clean": "rm -rf logs/* pids/* __pycache__ /*.pyc",
+    "reset": "rm -f chatbot.db && python run.py"
+  },
+  "keywords": [
+    "chatbot",
+    "ai",
+    "todo",
+    "xfce",
+    "agentic",
+    "fastapi",
+    "websockets",
+    "vnc"
+  ],
+  "author": "MiniMax Agent",
+  "license": "MIT",
+  "dependencies": {
+    "python": "^3.11"
+  },
+  "devDependencies": {
+    "pytest": "^7.0.0",
+    "black": "^23.0.0",
+    "flake8": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "python": ">=3.9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/minimax-agent-chatbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/minimax-agent-chatbot/issues"
+  },
+  "homepage": "https://github.com/your-username/minimax-agent-chatbot#readme",
+  "docker": {
+    "image": "minimax-chatbot:latest",
+    "ports": {
+      "5173": "5173",
+      "8000": "8000", 
+      "8080": "8080",
+      "5900": "5900",
+      "9222": "9222"
+    }
+  },
+  "config": {
+    "ports": {
+      "web": 5173,
+      "api": 8000,
+      "sandbox": 8080,
+      "vnc": 5900,
+      "chrome": 9222
+    }
+  }
+}

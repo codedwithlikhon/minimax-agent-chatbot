@@ -1,0 +1,264 @@
+version: '3.8'
+
+services:
+  # Core Chatbot Services
+  chatbot-api:
+    build: .
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./chrome_data:/app/chrome_data
+    environment:
+      - DATABASE_PATH=/app/data/chatbot.db
+      - WEB_PORT=5173
+      - API_PORT=8000
+      - VNC_PORT=5900
+      - CHROME_CDP_PORT=9222
+      # MCP Service URLs
+      - MCP_TIME_URL=http://mcp-time:3000
+      - MCP_PLAYWRIGHT_URL=http://mcp-playwright:3000
+      - MCP_THINKING_URL=http://mcp-sequentialthinking:3000
+      - MCP_DUCKURL_URL=http://mcp-duckduckgo:3000
+      - MCP_PUPPETEER_URL=http://mcp-puppeteer:3000
+      - MCP_MEMORY_URL=http://mcp-memory:3000
+      - MCP_DESKTOP_URL=http://mcp-desktop-commander:3000
+    depends_on:
+      - mcp-time
+      - mcp-playwright
+      - mcp-sequentialthinking
+      - mcp-duckduckgo
+      - mcp-puppeteer
+      - mcp-memory
+      - mcp-desktop-commander
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    
+  # MCP (Model Context Protocol) Services
+  mcp-time:
+    image: mcp/time:latest
+    ports:
+      - "8001:3000"
+    environment:
+      - TIME_ZONE=UTC
+      - MCP_PORT=3000
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+    
+  mcp-playwright:
+    image: mcp/playwright:latest
+    ports:
+      - "8002:3000"
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - MCP_PORT=3000
+      - HEADLESS=true
+      - BROWSER_TIMEOUT=30000
+      - SCREENSHOT_PATH=/data/screenshots
+    volumes:
+      - playwright_data:/data
+      - /dev/shm:/dev/shm  # For better performance
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+    
+  mcp-sequentialthinking:
+    image: mcp/sequentialthinking:latest
+    ports:
+      - "8003:3000"
+    environment:
+      - MAX_STEPS=10
+      - REASONING_TIMEOUT=30000
+      - MCP_PORT=3000
+      - MEMORY_ENABLED=true
+      - DEBUG=false
+    volumes:
+      - thinking_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+    
+  mcp-duckduckgo:
+    image: mcp/duckduckgo:latest
+    ports:
+      - "8004:3000"
+    environment:
+      - SEARCH_TIMEOUT=10000
+      - MAX_RESULTS=20
+      - MCP_PORT=3000
+      - SAFE_SEARCH=true
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+  
+  mcp-puppeteer:
+    image: mcp/puppeteer:latest
+    ports:
+      - "8005:3000"
+    environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+      - PUPPETEER_HEADLESS=true
+      - MCP_PORT=3000
+      - BROWSER_TIMEOUT=30000
+      - SCREENSHOT_PATH=/data/screenshots
+    volumes:
+      - puppeteer_data:/data
+      - /dev/shm:/dev/shm
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+  
+  mcp-memory:
+    image: mcp/memory:latest
+    ports:
+      - "8006:3000"
+    environment:
+      - MEMORY_PERSISTENCE_PATH=/data/memory.db
+      - MAX_MEMORY_SIZE=1000
+      - MCP_PORT=3000
+      - MEMORY_ENABLED=true
+    volumes:
+      - memory_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+  
+  mcp-desktop-commander:
+    image: mcp/desktop-commander:latest
+    ports:
+      - "8007:3000"
+    environment:
+      - COMMAND_TIMEOUT=30000
+      - MAX_COMMAND_OUTPUT=10000
+      - MCP_PORT=3000
+      - SAFETY_MODE=strict
+    volumes:
+      - /tmp:/tmp:ro
+      - /bin:/bin:ro
+      - /usr:/usr:ro
+      - desktop_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chatbot_network
+  
+  # VNC Server for Desktop Streaming
+  vnc-server:
+    image: consol/ubuntu-xfce-vnc
+    ports:
+      - "5900:5900"
+    environment:
+      - VNC_PASSWORD=123456
+      - VNC_RESOLUTION=1024x768
+      - DISPLAY=:1
+      - OPENBOX_ENABLED=true
+    volumes:
+      - vnc_data:/data
+    restart: unless-stopped
+    networks:
+      - chatbot_network
+    
+  # Websockify for VNC to WebSocket bridge
+  websockify:
+    image: novnc/websockify:latest
+    ports:
+      - "8080:8080"
+    command: ["websockify", "0.0.0.0:8080", "vnc-server:5900", "--web", "/usr/share/novnc"]
+    depends_on:
+      - vnc-server
+    restart: unless-stopped
+    networks:
+      - chatbot_network
+
+  # Optional: Add a VNC client for testing
+  vnc-client:
+    image: consol/ubuntu-xfce-vnc
+    ports:
+      - "6080:80"
+    environment:
+      - VNC_SERVER=vnc-server:5900
+    depends_on:
+      - vnc-server
+    profiles:
+      - vnc-client
+    networks:
+      - chatbot_network
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - chatbot-api
+    restart: unless-stopped
+    profiles:
+      - reverse-proxy
+    networks:
+      - chatbot_network
+
+# Named volumes for persistent data
+volumes:
+  playwright_data:
+    driver: local
+  thinking_data:
+    driver: local
+  vnc_data:
+    driver: local
+  puppeteer_data:
+    driver: local
+  memory_data:
+    driver: local
+  desktop_data:
+    driver: local
+
+# Networks
+networks:
+  chatbot_network:
+    name: chatbot_network
+    driver: bridge
