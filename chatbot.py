@@ -19,6 +19,7 @@ import logging
 from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import threading
@@ -1071,15 +1072,25 @@ class WebSocketManager:
 
 # FastAPI application
 app = FastAPI(title="MiniMax Agent Chatbot", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 chatbot = ChatBot()
 ws_manager = WebSocketManager(chatbot)
 
 # Mount static files (frontend)
-app.mount("/static", StaticFiles(directory="frontend/build", html=True), name="static")
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
 async def read_root():
-    return HTMLResponse(content=open("frontend/build/index.html").read())
+    return HTMLResponse(content=open("frontend/index.html").read())
 
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):

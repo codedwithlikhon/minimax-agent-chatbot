@@ -469,6 +469,16 @@
                     'completed': 'text-green-400',
                     'failed': 'text-red-400'
                 }[action.status] || 'text-gray-400';
+
+                // Helper to render action result
+                const renderResult = (result) => {
+                    if (!result) return '';
+                    // Check if the result is a URL pointing to an image
+                    if (result.startsWith('http') && (result.endsWith('.png') || result.endsWith('.jpg') || result.endsWith('.jpeg') || result.endsWith('.gif'))) {
+                        return `<div class="mt-1 p-1 bg-gray-600 rounded"><img src="${result}" alt="Action Result" class="max-w-full h-auto rounded"></div>`;
+                    }
+                    return `<div class="mt-1 p-1 bg-gray-600 rounded text-xs">${result}</div>`;
+                };
                 
                 actionDiv.innerHTML = `
                     <div class="flex items-start space-x-2">
@@ -476,7 +486,7 @@
                         <div class="flex-1">
                             <div class="font-semibold">${action.description}</div>
                             <div class="text-gray-400 text-xs">${action.created_at}</div>
-                            ${action.result ? `<div class="mt-1 p-1 bg-gray-600 rounded text-xs">${action.result}</div>` : ''}
+                            ${renderResult(action.result)}
                         </div>
                     </div>
                 `;
