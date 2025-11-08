@@ -7,7 +7,6 @@
     "start": "python run.py",
     "dev": "python chatbot.py",
     "api": "uvicorn chatbot:app --host 0.0.0.0 --port 8000 --reload",
-    "frontend": "cd frontend && python -m http.server 5173",
     "install-deps": "pip install -r requirements.txt",
     "test": "python -m pytest tests/",
     "logs": "./manage.sh logs",
